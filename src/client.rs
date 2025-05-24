@@ -56,7 +56,7 @@ fn watch_share() -> Result<(), std::io::Error>{
 
 
 
-    event_loop.run(move |event: Event<()>, event_loop|  {
+    event_loop.run(|event: Event<()>, event_loop|  {
         match event {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => {
@@ -65,14 +65,54 @@ fn watch_share() -> Result<(), std::io::Error>{
                 }
                 WindowEvent::Resized(size) => {
                     println!("Window resized: {:?}", size);
+                    // Resize the pixels surface when window is resized
+                    if let Err(err) = pixels.resize_surface(size.width, size.height) {
+                        eprintln!("pixels.resize_surface() failed: {err}");
+                        event_loop.exit();
+                        return;
+                    }
+                    window.request_redraw();
                 }
                 
                 WindowEvent::RedrawRequested => {
-                    // Drawing logic goes here
                     println!("Redrawing the window");
-
-
-                    // pixels.render().unwrap();
+                    let frame = pixels.frame_mut();
+                    
+                    // Clear the frame first
+                    for pixel in frame.chunks_exact_mut(4) {
+                        pixel[0] = 0;   // Red
+                        pixel[1] = 0;   // Green
+                        pixel[2] = 0;   // Blue
+                        pixel[3] = 255; // Alpha
+                    }
+                    
+                    // Draw some test pattern
+                    for pixel in frame.chunks_exact_mut(4) {
+                        pixel[0] = 0;   // Red
+                        pixel[1] = 0;   // Green
+                        pixel[2] = 0;   // Blue
+                        pixel[3] = 255; // Alpha
+                    }
+                    
+                    // Draw a simple diagonal line from top-left to bottom-right
+                    for i in 0..crate::WIDTH.min(crate::HEIGHT) {
+                        let x = i;
+                        let y = i;
+                        let pixel_index: usize = ((y as usize) * (crate::WIDTH as usize) + (x as usize)) * 4;
+                        
+                        if pixel_index + 3 < frame.len(){
+                            frame[pixel_index as usize] = 255;     // Red
+                            frame[(pixel_index as usize) + 1] = 255; // Green
+                            frame[(pixel_index as usize) + 2] = 255; // Blue
+                            frame[(pixel_index as usize) + 3] = 255; // Alpha
+                        }
+                    }
+                    
+                    if let Err(err) = pixels.render() {
+                        eprintln!("pixels.render() failed: {err}");
+                        event_loop.exit();
+                        return;
+                    }
                 }
                 
                 _ => {}
